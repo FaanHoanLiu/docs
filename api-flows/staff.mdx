@@ -1,6 +1,5 @@
 ---
 title: "Staff API Flow"
-description: ""
 ---
 
 # Staff API Flow
@@ -13,7 +12,7 @@ After the patron places an order, the order appears on the expeditor's KDS. At t
 
 ### Request
 
-The client needs to fetch all new orders on the current day using the ```orders``` endpoint. The client filters the response, including only the orders with a status of ```Received``` for the current day:
+The client needs to fetch all new orders on the current day using the `orders` endpoint. The client filters the response, including only the orders with a status of `Received` for the current day:
 
 ```bash
 curl -X GET 'http://{serverUrl}/orders?filter=status.eq~Received|created_at.gte~2025-05-01'
@@ -21,7 +20,7 @@ curl -X GET 'http://{serverUrl}/orders?filter=status.eq~Received|created_at.gte~
 
 ### Response
 
-The server returns a ```200``` status code with the response body containing new orders.
+The server returns a `200` status code with the response body containing new orders.
 
 Example Response
 
@@ -52,11 +51,12 @@ The expeditor can adjust the priority of the order (from 1 to 5), increasing the
 
 ### Request
 
-To allow the expeditor to change a dish's priority, it uses the ```orders``` endpoint:
+To allow the expeditor to change a dish's priority, it uses the `orders` endpoint:
 
 ```bash
 curl -X PUT 'http://{serverUrl}/orders/{id}'
 ```
+
 The request body contains the JSON for the order resource with the priority modified:
 
 ```bash
@@ -76,28 +76,27 @@ The request body contains the JSON for the order resource with the priority modi
 }
 ```
 
-
 ### Response
 
-The server responds with a ```200`` status code with the response body containing the updated resource.
+The server responds with a \`\`\`200\`\` status code with the response body containing the updated resource.
 
 ## Initiating Preparation
 
-Now that a dish is prioritized, the expeditor can initiate the preparation of the order by settingthe order status to ```In Progress```
+Now that a dish is prioritized, the expeditor can initiate the preparation of the order by settingthe order status to `In Progress`
 
 ### Request
 
-To do this, the client uses the ```orders``` endpoint.
+To do this, the client uses the `orders` endpoint.
 
 ```bash
 curl -X PUT 'http://{serverUrl}/orders/{id}'
 ```
 
-The request body contains the JSON for the order resource with the ```status``` modified from ```Received``` to ```In Progress```.
+The request body contains the JSON for the order resource with the `status` modified from `Received` to `In Progress`.
 
 ### Response
 
-The server responds with a ```200``` status code with the response body containing the updated order resource.
+The server responds with a `200` status code with the response body containing the updated order resource.
 
 ## Order Prepration by Stations
 
@@ -105,15 +104,15 @@ Each dish in the order is assigned to a specific station (e.g. cold, hot, bevera
 
 ### Request
 
- To do this, the client needs to use the ```dishes``` endpoint to view an order's dishes, filtering the response to only include dishes belonging to a specific ```station```:
+To do this, the client needs to use the `dishes` endpoint to view an order's dishes, filtering the response to only include dishes belonging to a specific `station`:
 
- ```bash
- curl -X GET 'http://{serverUrl}/orders/{id}/dishes?filter=station.eq~hot&fields=name|image_name'
- ```
+```bash
+curl -X GET 'http://{serverUrl}/orders/{id}/dishes?filter=station.eq~hot&fields=name|image_name'
+```
 
 ### Response
 
-The server returns a ```200``` status code with the response body containing all the dishes part of the order that belong to the specified station:
+The server returns a `200` status code with the response body containing all the dishes part of the order that belong to the specified station:
 
 ```bash
 {
@@ -127,3 +126,75 @@ The server returns a ```200``` status code with the response body containing all
   "total_results": 1
 }
 ```
+
+## Display Dish Ingredients
+
+When staff begins preparing dishes at their station, they need to know each dish's ingredients.
+
+### Request
+
+To display a dish's ingredients, the client uses the ```dishes``` endpoint with the ingredients sub-resource. The client references previously saved dish IDs and sends an HTTP request for each:
+
+```bash
+curl -X GET 'http://{serverUrl}/dishes/{id}/ingredients'
+```
+### Response
+
+The server responds with a ```200``` status code with the response body containing a list of a dish's ingredients.
+
+```bash
+{
+  "results": [
+    {
+      "id": "6828b624d306cfcdcf20b0c8",
+      "created_at": "2025-05-17T16:15:32.264Z",
+      "updated_at": "2025-05-17T16:15:32.265Z",
+      "name": "Wild Boar",
+      "in_stock_qty": 3,
+      "price": 5000
+    },
+    {
+      "id": "6828b716d306cfcdcf20b0cc",
+      "created_at": "2025-05-17T16:19:34.273Z",
+      "updated_at": "2025-05-17T16:19:34.273Z",
+      "name": "Juniper Berries",
+      "in_stock_qty": 15,
+      "price": 1200
+    },
+    {
+      "id": "6828b763d306cfcdcf20b0d0",
+      "created_at": "2025-05-17T16:20:51.004Z",
+      "updated_at": "2025-05-17T16:20:51.004Z",
+      "name": "Sage",
+      "in_stock_qty": 20,
+      "price": 800
+    }
+  ],
+  "total_results": 3
+}
+```
+
+The client can now display the list of ingredients required to create a dish.
+
+## Ready For Assembly
+
+When a station completes preparation of their part of the order, they mark it as "Ready For Assembly" on their KDS. The expeditor is notified when all stations have marked their parts as ready. This process is managed within the client's logic and doesn't require use of the API.
+
+## Order Assembly
+
+The expeditor assembles the parts of the order from different stations. Once assembled, the expeditor updates the order status to "On The Way".
+
+### Request
+
+To do this, the client needs to update the order status, once again, using the ```orders``` endpoint:
+
+```bash
+curl -X PUT 'http://{serverUrl}/orders/{id}'
+```
+
+For table-side ordering, the client sends an HTTP request, updating the ```status``` of the order from ```In Progress``` to ```On The Way```.
+
+
+### Response
+
+The server responds with a ```200``` status code with the response body containing the updated order resource. For takeaway orders, the expeditor changes the ```status``` to ```Ready for Pickup``` to indicate the order is ready for the patron.
