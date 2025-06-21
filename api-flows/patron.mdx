@@ -1,7 +1,8 @@
 ---
-title: ""
-description: ""
+title: "Patron API Flow"
+description: "Describes the journey of a patron in the Kitchen Display System (KDS). The patron starts by open the food ordering application which displays the categories (e.g., Appetizer, Main Course, Dessert) which the patron can browse."
 ---
+
 # Patron API Flow
 
 Describes the journey of a patron in the Kitchen Display System (KDS). The patron starts by open the food ordering application which displays the categories (e.g., Appetizer, Main Course, Dessert) which the patron can browse.
@@ -12,14 +13,152 @@ The patron has opened the food ordering app and has clicked on a category.
 
 ### Request
 
-This request gets data from the `dishes`endpoint:
+This request gets data from the `dishes`endpoint, filtering results for the dishes corresponding to the category that the user has selected (in this example, Appetizer):
 
 ```bash
-curl -X GET http://{serverUrl}/dishes
+curl -X GET 'http://{serverUrl}/dishes?filter=category.eq~Appetizer&fields=name|description|ingredients
+```
+
+Note: the fields query parameter limits the fields returned to the dish's name and description (for the end user) and its list of ingredients (for the ingredient check in the next step).
+
+### Response
+
+If the request was successful, the server responds with a `200` status code, with the response body containing the list of dishes corresponding to the specified category.
+
+Example Response
+
+```json
+{
+  "results": [
+    {
+      "id": "681912070b9a351cc857e551",
+      "name": "Bruschetta al Pomodoro",
+      "description": "Toasted bread topped with a mixture of ripe tomatoes, garlic, basil, and olive oil.",
+      "ingredients": [
+        {
+          "ingredient_id": "681912070b9a351cc857e539",
+          "is_essential": false,
+          "_id": "681912070b9a351cc857e552"
+        },
+        {
+          "ingredient_id": "681912070b9a351cc857e548",
+          "is_essential": false,
+          "_id": "681912070b9a351cc857e553"
+        },
+        {
+          "ingredient_id": "681912070b9a351cc857e538",
+          "is_essential": false,
+          "_id": "681912070b9a351cc857e554"
+        }
+      ]
+    }
+  ],
+  "total_results": 1
+}
+```
+
+## Check Ingredient Quantities
+
+The client app must check inventory for necessary ingredients before displaying dishes in the user interface. Each dish references ingredient IDs, identifying essential ones. If an essential ingredient is out of stock, the UI will disable dish selection.
+
+### Request
+
+The client sends an HTTP request to the `ingredients` endpoint, filtering the response to only include the ingredient quantity:
+
+```bash
+curl -X GET 'http://{serverUrl}/ingredients/{id}&fields=in_stock_qty'
 ```
 
 ### Response
 
-```json
-a : "hello"
+If the request was successful, the server responds with a `200` status code, with the response body containing the ingredient's in-stock quantity.
+
+Example Response
+
+```bash
+{
+  "id": "681912070b9a351cc857e542",
+  "in_stock_qty": 7
+}
 ```
+
+## View Dish Details
+
+The patron selects a dish from the list to get more information about it. The client application needs to retrieve that dish's detail using the `dishes` endpoint.
+
+### Request
+
+The client sends an HTTP request, filtering the response to only the fields it needs to display on the dish's details page.
+
+```bash
+curl -X GET 'http://{serverUrl}/dishes/{id}?fields=price|image_name|ingredients'
+```
+
+### Response
+
+If the request was successful, the server responds with a `200` status code with the response body containing the dish details. The client now has the data it needs to populate the dish details page.
+
+Example Response
+
+```bash
+{
+  "id": "681912070b9a351cc857e551",
+  "price": 799,
+  "image_name": "bruschetta_al_pomodoro",
+  "ingredients": [
+    {
+      "ingredient_id": "681912070b9a351cc857e539",
+      "is_essential": false,
+      "_id": "681912070b9a351cc857e552"
+    },
+    {
+      "ingredient_id": "681912070b9a351cc857e548",
+      "is_essential": false,
+      "_id": "681912070b9a351cc857e553"
+    },
+    {
+      "ingredient_id": "681912070b9a351cc857e538",
+      "is_essential": false,
+      "_id": "681912070b9a351cc857e554"
+    }
+  ]
+}
+```
+
+## Adding Dishes and Viewing the Cart
+
+If the user likes the dish, they can add it to their order. The client keeps track of the dishes that the user orders (in their cart). When the user views the bill, the client can retrieve each dish's details from local storage.
+
+## Placing an Order
+
+When the user has selected all the dishes they wish to order, they place the order. The client application will place the order using the ```orders``` endpoint.
+
+### Request
+
+The client sends an HTTP request with the dishes the user selected (from local storage) and includes them in the request body.
+
+```bash
+curl -X POST 'http://{serverUrl}/orders'
+```
+
+Example request payload:
+
+```bash
+{
+  "name" : "John",
+  "table_number" : 19,
+  "dish_ids" : [
+    "681912070b9a351cc857e55a",
+    "681912070b9a351cc857e5e5",
+    "681912070b9a351cc857e5bf"
+  ]
+}
+```
+
+### Response
+
+If the request was successful, the server responds with a ```201``` status code and the response body includes important information, such as ```order_number```, ```priority``` and ```status```.
+
+## Order Confirmation
+
+Once the user places an order, the patron receives confirmation and the order details are sent to the restaurant staff to begin preparing the order.
