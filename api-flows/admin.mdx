@@ -53,3 +53,19 @@ The JSON payload will contain information about the new ingredient:
 
 The server responds with a `201 Created` with the response body containing the full resource.
 
+## Create Dishes
+
+Admins create dishes by associating them with the necessary ingredients. This is achieved by making an HTTP request to the `dishes` endpoint.
+
+### Request
+
+```bash
+CURL -X POST 'http://{serverUrl}/dishes'
+```
+
+The JSON payload containsthe dish'es details. Each ingredient is either essential or non-essential in preparing the dish. This feature ensures that dishes are correctly displayed kn the UI and indicates availability to customers.
+
+### Response
+
+If the request was successful, the server responds with a `201 Created` status code with the response body containing the full resource. The dish ID returned in the response can be used to apply the dish to a category.
+
