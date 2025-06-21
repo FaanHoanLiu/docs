@@ -53,6 +53,23 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Kitchen Display System",
+        "groups": [
+          {
+            "group": "API Flows",
+            "pages": [
+              "api-flows/patron",
+              "api-flows/staff"
+            ]
+          },
+          {
+            "group": "Other Stuff",
+            "pages": [
+            ]
+          }
+        ]
       }
     ],
     "global": {
