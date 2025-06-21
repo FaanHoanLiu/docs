@@ -1,7 +1,3 @@
----
-title: "Staff API Flow"
----
-
 # Staff API Flow
 
 Describes the journey of a staff member ('expeditor') in the Kitchen Display System.
@@ -20,11 +16,11 @@ curl -X GET 'http://{serverUrl}/orders?filter=status.eq~Received|created_at.gte~
 
 ### Response
 
-The server returns a `200` status code with the response body containing new orders.
+The server returns a `200 OK` status code with the response body containing new orders.
 
 Example Response
 
-```bash
+```json
 {
   "results": [
     {
@@ -59,7 +55,7 @@ curl -X PUT 'http://{serverUrl}/orders/{id}'
 
 The request body contains the JSON for the order resource with the priority modified:
 
-```bash
+```json
 {
   "id": "6828b99cd306cfcdcf20b0e1",
   "name": "Jeremy",
@@ -78,7 +74,7 @@ The request body contains the JSON for the order resource with the priority modi
 
 ### Response
 
-The server responds with a \`\`\`200\`\` status code with the response body containing the updated resource.
+The server responds with a ```200 OK``` status code with the response body containing the updated resource.
 
 ## Initiating Preparation
 
@@ -96,7 +92,7 @@ The request body contains the JSON for the order resource with the `status` modi
 
 ### Response
 
-The server responds with a `200` status code with the response body containing the updated order resource.
+The server responds with a `200  OK` status code with the response body containing the updated order resource.
 
 ## Order Prepration by Stations
 
@@ -112,9 +108,9 @@ curl -X GET 'http://{serverUrl}/orders/{id}/dishes?filter=station.eq~hot&fields=
 
 ### Response
 
-The server returns a `200` status code with the response body containing all the dishes part of the order that belong to the specified station:
+The server returns a `200 OK` status code with the response body containing all the dishes part of the order that belong to the specified station:
 
-```bash
+```json
 {
   "results": [
     {
@@ -133,16 +129,17 @@ When staff begins preparing dishes at their station, they need to know each dish
 
 ### Request
 
-To display a dish's ingredients, the client uses the ```dishes``` endpoint with the ingredients sub-resource. The client references previously saved dish IDs and sends an HTTP request for each:
+To display a dish's ingredients, the client uses the `dishes` endpoint with the ingredients sub-resource. The client references previously saved dish IDs and sends an HTTP request for each:
 
 ```bash
 curl -X GET 'http://{serverUrl}/dishes/{id}/ingredients'
 ```
+
 ### Response
 
-The server responds with a ```200``` status code with the response body containing a list of a dish's ingredients.
+The server responds with a `200 OK` status code with the response body containing a list of a dish's ingredients.
 
-```bash
+```json
 {
   "results": [
     {
@@ -186,15 +183,33 @@ The expeditor assembles the parts of the order from different stations. Once ass
 
 ### Request
 
-To do this, the client needs to update the order status, once again, using the ```orders``` endpoint:
+To do this, the client needs to update the order status, once again, using the `orders` endpoint:
 
 ```bash
 curl -X PUT 'http://{serverUrl}/orders/{id}'
 ```
 
-For table-side ordering, the client sends an HTTP request, updating the ```status``` of the order from ```In Progress``` to ```On The Way```.
-
+For table-side ordering, the client sends an HTTP request, updating the `status` of the order from `In Progress` to `On The Way`.
 
 ### Response
 
-The server responds with a ```200``` status code with the response body containing the updated order resource. For takeaway orders, the expeditor changes the ```status``` to ```Ready for Pickup``` to indicate the order is ready for the patron.
+The server responds with a `200 OK` status code with the response body containing the updated order resource.
+
+````json
+{
+  "id": "6828b99cd306cfcdcf20b0e1",
+  "name": "Jeremy",
+  "table_number": 20,
+  "status": "On The Way",
+  "priority": 1,
+  "dish_ids": [
+    "6828b91dd306cfcdcf20b0d7"
+  ],
+  "special_requests": "No peanuts.",
+  "created_at": "2025-05-17T16:30:20.565Z",
+  "updated_at": "2025-05-17T16:30:20.565Z",
+  "scheduled_at": null
+}```
+
+For takeaway orders, the expeditor changes the ```status``` to ```Ready for Pickup``` to indicate the order is ready for the patron.
+````

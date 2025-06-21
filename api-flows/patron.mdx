@@ -1,8 +1,3 @@
----
-title: "Patron API Flow"
-description: "Describes the journey of a patron in the Kitchen Display System (KDS). The patron starts by open the food ordering application which displays the categories (e.g., Appetizer, Main Course, Dessert) which the patron can browse."
----
-
 # Patron API Flow
 
 Describes the journey of a patron in the Kitchen Display System (KDS). The patron starts by open the food ordering application which displays the categories (e.g., Appetizer, Main Course, Dessert) which the patron can browse.
@@ -71,11 +66,11 @@ curl -X GET 'http://{serverUrl}/ingredients/{id}&fields=in_stock_qty'
 
 ### Response
 
-If the request was successful, the server responds with a `200` status code, with the response body containing the ingredient's in-stock quantity.
+If the request was successful, the server responds with a `200 OK` status code, with the response body containing the ingredient's in-stock quantity.
 
 Example Response
 
-```bash
+```json
 {
   "id": "681912070b9a351cc857e542",
   "in_stock_qty": 7
@@ -96,11 +91,11 @@ curl -X GET 'http://{serverUrl}/dishes/{id}?fields=price|image_name|ingredients'
 
 ### Response
 
-If the request was successful, the server responds with a `200` status code with the response body containing the dish details. The client now has the data it needs to populate the dish details page.
+If the request was successful, the server responds with a `200 OK` status code with the response body containing the dish details. The client now has the data it needs to populate the dish details page.
 
 Example Response
 
-```bash
+```json
 {
   "id": "681912070b9a351cc857e551",
   "price": 799,
@@ -131,7 +126,7 @@ If the user likes the dish, they can add it to their order. The client keeps tra
 
 ## Placing an Order
 
-When the user has selected all the dishes they wish to order, they place the order. The client application will place the order using the ```orders``` endpoint.
+When the user has selected all the dishes they wish to order, they place the order. The client application will place the order using the `orders` endpoint.
 
 ### Request
 
@@ -143,7 +138,7 @@ curl -X POST 'http://{serverUrl}/orders'
 
 Example request payload:
 
-```bash
+```json
 {
   "name" : "John",
   "table_number" : 19,
@@ -157,7 +152,7 @@ Example request payload:
 
 ### Response
 
-If the request was successful, the server responds with a ```201``` status code and the response body includes important information, such as ```order_number```, ```priority``` and ```status```.
+If the request was successful, the server responds with a `201 Created` status code and the response body includes important information, such as `order_number`, `priority` and `status`.
 
 ## Order Confirmation
 

@@ -1,0 +1,55 @@
+# Admin API Flow
+
+Admins can manage ingredients, dishes, categories, and menus within the React Admin Panel.
+
+## Admin Login
+
+THe API begins with the admin logging into the admin application using their credentials to gain access to administrative functions.
+
+### Request
+
+Admin login is achieved by making an HTTP request to the ```auth``` endpoint:
+
+```bash
+curl -X POST 'http://{serverUrl}/auth/token'
+```
+The request body should contain the user name and password:
+
+```json
+{
+  "grant_type": "password",
+  "user_name": "johndoe",
+  "password" : "pl@intextp@$$word"
+}
+```
+
+### Response
+
+If the request was successful, the server responds with a `201 Created` status code with the response body containing the access token.
+
+## Create Ingredients
+
+Ingredients are fundamental components used to create dishes. Admins create ingredients and specify their quantity to track inventory levels accurately. This ensures there are sufficient ingredients available to fulfill customer orders. 
+
+## Request
+
+Creation of an ingredient is achieved by making an HTTP request to the ``` ingredients``` endpoint:
+
+```bash
+curl -X POST 'http://{serverUrl}/ingredients'
+```
+
+The JSON payload will contain information about the new ingredient:
+
+```json
+{
+    "display_name" : "tomato",
+    "name" : "tomato",
+    "in_stock_qty" : 30
+}
+```
+
+## Response
+
+The server responds with a `201 Created` with the response body containing the full resource.
+
