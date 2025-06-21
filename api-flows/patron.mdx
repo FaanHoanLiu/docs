@@ -1,0 +1,25 @@
+---
+title: ""
+description: ""
+---
+# Patron API Flow
+
+Describes the journey of a patron in the Kitchen Display System (KDS). The patron starts by open the food ordering application which displays the categories (e.g., Appetizer, Main Course, Dessert) which the patron can browse.
+
+## Start browsing
+
+The patron has opened the food ordering app and has clicked on a category.
+
+### Request
+
+This request gets data from the `dishes`endpoint:
+
+```bash
+curl -X GET http://{serverUrl}/dishes
+```
+
+### Response
+
+```json
+a : "hello"
+```
