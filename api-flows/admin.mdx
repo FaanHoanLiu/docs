@@ -63,7 +63,27 @@ Admins create dishes by associating them with the necessary ingredients. This is
 CURL -X POST 'http://{serverUrl}/dishes'
 ```
 
-The JSON payload containsthe dish'es details. Each ingredient is either essential or non-essential in preparing the dish. This feature ensures that dishes are correctly displayed kn the UI and indicates availability to customers.
+The JSON payload contains the dish's details, for example:
+
+```json
+{
+  "name": "Ratatouille",
+  "description": "A traditional French vegetable stew from Provence made with eggplant, zucchini, bell peppers, tomatoes, onions, and garlic, all simmered together with olive oil and herbs like thyme and basil.",
+  "category": "Main Course",
+  "preparation_time": 60,
+  "price": 2099,
+  "image_name": "ratatouille",
+  "station": "hot",
+  "ingredients": [
+    {
+      "ingredient_id": "{{ingredientId}}",
+      "is_essential": true
+    }
+  ]
+}
+```
+
+Each ingredient is either essential or non-essential in preparing the dish. This feature ensures that dishes are correctly displayed kn the UI and indicates availability to customers.
 
 ### Response
 

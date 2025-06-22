@@ -61,7 +61,9 @@
             "group": "API Flows",
             "pages": [
               "api-flows/patron",
-              "api-flows/staff"
+              "api-flows/staff",
+              "api-flows/admin",
+              "api-flows/auth"
             ]
           },
           {
