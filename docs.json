@@ -35,31 +35,11 @@
         ]
       },
       {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "API Documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint Examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Kitchen Display System API",
+        "tab": "Kitchen Display System API Reference",
         "openapi": "api-reference/kds/openapi.yaml"
       },
       {
-        "tab": "Kitchen Display System",
+        "tab": "Kitchen Display System Guide",
         "groups": [
           {
             "group": "API Flows",
@@ -68,12 +48,6 @@
               "api-flows/staff",
               "api-flows/admin",
               "api-flows/auth"
-            ]
-          },
-          {
-            "group": "OpenAPI specification",
-            "pages": [
-              "api-reference/kds/openapi.yaml"
             ]
           }
         ]
