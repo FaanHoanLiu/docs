@@ -55,6 +55,10 @@
         ]
       },
       {
+        "tab": "Kitchen Display System API",
+        "openapi": "api-reference/kds/openapi.yaml"
+      },
+      {
         "tab": "Kitchen Display System",
         "groups": [
           {
@@ -67,8 +71,9 @@
             ]
           },
           {
-            "group": "Other Stuff",
+            "group": "OpenAPI specification",
             "pages": [
+              "api-reference/kds/openapi.yaml"
             ]
           }
         ]

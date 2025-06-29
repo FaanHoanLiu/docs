@@ -1,0 +1,1796 @@
+openapi: 3.0.3
+info:
+  title: Point of Service (POS) API
+  version: '1.0'
+  description: An application programming interface (API) that provides access to a Kitchen Display System (KDS).
+  contact:
+    name: Course Discord server
+    url: https://discord.gg/dPsnz5u9
+    email: mark.wentowski@docsgeek.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: '{gh-codespaces-server-url}/'
+    description: The URL for the server which hosts this interface.
+    variables:
+      gh-codespaces-server-url:
+        default: https://<workspace-id>.app.github.dev
+        description: The environment variable containing the server URL.
+  - url: http://localhost:80/
+    description: The URL for the local server hosting this interface on the local machine.
+tags:
+  - name: Orders
+    description: Operations that relate to patron orders that have been entered into the KDS.
+  - name: Dishes
+    description: Operations that relate to dishes available in the KDS.
+  - name: Ingredients
+    description: Operations that relate to ingredients used in dishes available in the KDS.
+  - name: Users
+    description: Operations that relate to users of the KDS.
+  - name: Auth
+    description: Operations that relate to authorization of users of the KDS.
+paths:
+  /orders:
+    post:
+      summary: Create an order
+      operationId: postOrder
+      description: The patron submits an order for the staff to fulfill. The order includes the name of the patron, their table number and the list of dishes desired.
+      tags:
+        - Orders
+      security:
+        - AccessToken: []
+      responses:
+        '201':
+          description: The order was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the patron should be redirected after the order has been created.
+        '400':
+          description: The server could not create the order because of an issue with the client's request. Check the request body.
+        '401':
+          description: Creating an order requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refuses to authorize the creation of the new order.
+        '404':
+          description: The attempt to create the order failed because the address specified was incorrect. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The order could not be created due to a conflict with the current state of the server.  It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from creating the order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        $ref: '#/components/requestBodies/CreateOrderRequest'
+    get:
+      summary: Retrieve a list of orders
+      description: A staff member or admin can retrieve a list of orders previously placed by patrons to see all information associated with each order.
+      operationId: getOrderList
+      tags:
+        - Orders
+      parameters:
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: priority
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: table_number|status|priority
+        - name: filter
+          in: query
+          description: Define criteria to filter results
+          schema:
+            type: string
+            example: table_number.lt~5|status.eq~On the Way
+        - name: limit
+          in: query
+          description: Defines the maximum number of results returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the results to be returned
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The list of orders was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  total_results:
+                    type: integer
+                    example: 20
+        '400':
+          description: The server could not retrieve the list of orders due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving an order list requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the order list.
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the order list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /orders/{id}:
+    get:
+      summary: Retrieve a specific order
+      description: A staff member can retrieve all the details of an order specified by it `id`, including the server's name, the table number, the status of the order, its priority and all the dishes included in the order.
+      operationId: getOrder
+      tags:
+        - Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bcc
+          description: The id of the order provided when it was created.
+        - name: fields
+          in: query
+          description: The fields to include in the returned results.
+          schema:
+            type: string
+          example: table_number|status|priority
+      responses:
+        '200':
+          description: The order was retrieved successfully. The results are in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: The server could not retrieve the order due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving an order requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the order.
+        '404':
+          description: The requested order could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      summary: Update an order
+      description: A staff member can change an existing order, changing any of its details, such as status, priority or any of the dishes in the order.
+      operationId: putOrder
+      tags:
+        - Orders
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bcd
+          description: The id of the order that should be changed.
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateOrderRequest'
+      responses:
+        '200':
+          description: The order was updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  total_results:
+                    type: integer
+                    example: 1
+        '204':
+          description: The order was updated successfully, and there is no content being returned.
+        '400':
+          description: The server could not update the order due to an issue with the client's request. Check the request body.
+        '401':
+          description: Updating an order requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the update of the order.
+        '404':
+          description: The requested order was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The order could not be updated due to a conflict with the current state of the server.  It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from updating the order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete an order
+      description: A staff member can remove an order from the KDS.
+      operationId: deleteOrder
+      tags:
+        - Orders
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bca
+          description: The id of the order to be deleted.
+      responses:
+        '204':
+          description: The order was deleted successfully, and there is no content being returned.
+        '400':
+          description: The server could not delete the order due to an issue with the client's request. Check the request body.
+        '401':
+          description: Deleting an order requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the deletion of the order.
+        '404':
+          description: The requested order was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from deleting the order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /orders/{id}/dishes:
+    get:
+      summary: Retrieve dishes for an order
+      description: A staff member can retrieve the list of dishes associated with a given order.
+      operationId: getOrderDishes
+      tags:
+        - Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bcb
+          description: The id of the order for which to retrieve the dishes.
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: station
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: name|station|ingredients
+        - name: filter
+          in: query
+          description: Define criteria to filter results
+          schema:
+            type: string
+            example: created_at.gt~2024-05-07|station.eq~hot
+        - name: limit
+          in: query
+          description: Defines the maximum number of results returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the results to be returned
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The order's dishes were retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Dish'
+                  total_results:
+                    type: integer
+                    example: 1
+        '400':
+          description: The server could not retrieve the list of dishes due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving an order's dishes requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the order's dish list.
+        '404':
+          description: The requested order was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the order's dish list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dishes:
+    post:
+      summary: Create a dish
+      tags:
+        - Dishes
+      operationId: postDishes
+      security:
+        - AccessToken: []
+      description: An admin can create a new dish, specifying the dish's category, its ingredients, preparation time, station, and an image of the dish.
+      requestBody:
+        $ref: '#/components/requestBodies/CreateDishRequest'
+      responses:
+        '201':
+          description: The dish was created successfully. The new dish's details are returned in the reponse body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dish'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the admin should be redirected after the dish has been created.
+        '400':
+          description: The server could not create the dish because of an issue with the client's request. Check the request body.
+        '401':
+          description: Creating a dish requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refuses to authorize the creation of the new dish.
+        '404':
+          description: The attempt to create the dish failed because the address specified was incorrect.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The dish could not be created due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from creating the dish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    get:
+      summary: Retrieve a list of dishes
+      description: Retrieves the details of a set of dishes.
+      operationId: getDishList
+      tags:
+        - Dishes
+      parameters:
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: name
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: name|ingredients|station
+        - name: filter
+          in: query
+          description: Define criteria to filter results
+          schema:
+            type: string
+            example: created_at.gt~2024-05-07|price.lte~19.99
+        - name: limit
+          in: query
+          description: Defines the maximum number of dishes returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the dishes to be returned
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The list of dishes was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Dish'
+                  total_results:
+                    type: integer
+                    example: 20
+                    description: The total number of ing
+        '400':
+          description: The server could not retrieve the list of dishes due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving a dish list requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the dish list.
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the dish list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dishes/{id}:
+    get:
+      summary: Retrieve a specific dish
+      description: A staff, admin or patron can retrieve the details of a specific dish.
+      operationId: getDish
+      tags:
+        - Dishes
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 66294b2a4475a41f3e709bd1
+          description: The id of the dish to be retrieved.
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: name|price|station|ingredients
+      responses:
+        '200':
+          description: The dish was retrieved successfully. The results are in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dish'
+        '400':
+          description: The server could not retrieve the dish due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving a dish requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the dish.
+        '404':
+          description: The requested dish could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the dish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      summary: Update a dish
+      operationId: putDish
+      tags:
+        - Dishes
+      security:
+        - AccessToken: []
+      description: An admin can change the details of a dish, including its category, its ingredients, preparation time, station, or an image of the dish.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bce
+          description: The unique id of the dish to update.
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateDishRequest'
+      responses:
+        '200':
+          description: The dish was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dish'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the user should be redirected after the dish has been updated.
+        '204':
+          description: The dish was updated successfully, and there is no content being returned.
+        '400':
+          description: The server could not update the dish due to an issue with the client's request. Check the request body.
+        '401':
+          description: Updating a dish requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the update of the dish.
+        '404':
+          description: The requested dish was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The dish could not be updated due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from updating the dish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete a dish
+      description: An admin can remove a dish from the KDS.
+      operationId: deleteDish
+      tags:
+        - Dishes
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bd0
+          description: The unique id of the dish to be removed.
+      responses:
+        '204':
+          description: The dish was deleted successfully, and there is no content being returned.
+        '400':
+          description: The server could not delete the dish due to an issue with the client's request. Check the request body.
+        '401':
+          description: Deleting a dish requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the deletion of the dish.
+        '404':
+          description: The requested dish could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from deleting the dish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /dishes/{id}/ingredients:
+    get:
+      summary: Retrieve a dish's ingredients
+      description: An admin, staff or patron can see the ingredients in a given dish with this request.
+      operationId: getDishIngredients
+      tags:
+        - Dishes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bd2
+          description: The id of the dish for which to retrieve the ingredients.
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: name
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: name|in_stock_qty
+        - name: filter
+          in: query
+          description: Define criteria to filter results
+          schema:
+            type: string
+            example: created_at.gt~2024-05-07|in_stock_qty.gt~3
+        - name: limit
+          in: query
+          description: Defines the maximum number of results returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the results to be returned
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The dish's ingredients were retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ingredient'
+                  total_results:
+                    type: integer
+                    example: 1
+        '400':
+          description: The server could not retrieve the list of ingredients due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving a dish's ingredients requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the dish's ingredient list.
+        '404':
+          description: The requested dish was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the dish's ingredient list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /ingredients:
+    post:
+      summary: Create an ingredient
+      description: Admins create ingredients and specify their initial in-stock quantity to track inventory levels accurately and their price for inventory ordering. The inventory leves are important to ensure that there are sufficient ingredients available to fill customer orders. The ingredient `id` returned in the response can be used to associate the ingredient with a dish.
+      operationId: postIngredient
+      tags:
+        - Ingredients
+      security:
+        - AccessToken: []
+      requestBody:
+        $ref: '#/components/requestBodies/CreateIngredientRequest'
+      responses:
+        '201':
+          description: The ingredient was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the admin should be redirected after the ingredient is created.
+        '400':
+          description:  The server could not create the ingredient because of an issue with the client's request. Check the request body. 
+        '401':
+          description: Creating an ingredient requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted. 
+        '403':
+          description: The server refuses to authorize the creation of the new ingredient.
+        '409':
+          description:  The ingredient could not be created due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from creating the ingredient.  
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    get:
+      summary: Get a list of ingredients
+      description: Retrieves the details of a set of ingredients.
+      operationId: getIngredientList
+      tags:
+        - Ingredients
+      parameters:
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: name
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: name|in_stock_qty
+        - name: filter
+          in: query
+          description: Define criteria to filter results
+          schema:
+            type: string
+            example: created_at.gt~2024-05-07|in_stock_qty.lt~5
+        - name: limit
+          in: query
+          description: Defines the maximum number of ingredients returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the ingredients to be returned
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The list of ingredients was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ingredient'
+                  total_results:
+                    type: integer
+                    example: 1
+        '400':
+          description: The server could not retrieve the list of ingredients due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving an ingredient list requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the ingredient list.
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the ingredient list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /ingredients/{id}:
+    get:
+      summary: Retrieve a specific ingredient
+      description: Returns the details of a specified ingredient, such as its name, price and in-stock quantity.
+      operationId: getIngredient
+      tags:
+        - Ingredients
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 614d706b67c122001f35cc47
+          description: The id of the ingredient provided when it was created.
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: in_stock_qty|name
+      responses:
+        '200':
+          description: The ingredient was retrieved successfully. The results are in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+        '400':
+          description: The server could not retrieve the ingredient due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving an ingredient requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the ingredient.
+        '404':
+          description: The requested ingredient could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the ingredient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      summary: Upate an ingredient
+      description: An admin can change the details of an ingredient, including its name, in-stock quantity and its price.
+      operationId: putIngredient
+      tags:
+        - Ingredients
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 617d2e09ec42e0001f41bf84
+          description: The unique id of the ingredient to update.
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateIngredientRequest'
+      responses:
+        '200':
+          description: The ingredient was updated successfully.
+        '204':
+          description: The ingredient was updated successfully, and there is no content being returned.
+        '400':
+          description: The server could not update the ingredient due to an issue with the client's request. Check the request body.
+        '401':
+          description: Updating an ingredient requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the update of the ingredient.
+        '404':
+          description: The requested ingredient was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The ingredient could not be updated due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from updating the ingredient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete an ingredient
+      description: An admin can remove an ingredient from the KDS.
+      operationId: deleteIngredient
+      tags:
+        - Ingredients
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 61c8c34bb02368001f8f0812
+          description: The unique id of the ingredient to be removed.
+      responses:
+        '204':
+          description: The ingredient was deleted successfully, and there is no content being returned.
+        '400':
+          description: The server could not ingredient the dish due to an issue with the client's request. Check the request body
+        '401':
+          description: Deleting an ingredient requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the deletion of the ingredient.
+        '404':
+          description: The requested ingredient could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from deleting the ingredient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /users:
+    post:
+      summary: Create a user account
+      description: An admin can create an account for a user, giving them a username and a password for access to the KDS.
+      operationId: postUser
+      tags:
+        - Users
+      requestBody:
+        $ref: '#/components/requestBodies/CreateUserRequest'
+      responses:
+        '201':
+          description: The user account was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the admin should be redirected after the user account is created.
+        '400':
+          description: The server could not create the user account because of an issue with the client's request. Check the request body.
+        '409':
+          description: The user account could not be created due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from creating the user account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security: []
+    get:
+      summary: Get a list of users
+      description: Retrieve the details of a set of user accounts.
+      operationId: getAllUsers
+      tags:
+        - Users
+      parameters:
+        - name: sort
+          in: query
+          description: Specifies the field by which the results should be sorted.
+          schema:
+            type: string
+          example: user_name
+        - name: order
+          in: query
+          description: Specifies ascending or descending order for the sort.
+          schema:
+            type: string
+          example: asc
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: user_name|email|role
+        - name: filter
+          in: query
+          description: Define criteria to filter results.
+          schema:
+            type: string
+            example: created_at.gt~2024-05-07|user_name.eq~apiuser01
+        - name: limit
+          in: query
+          description: Defines the maximum number of user accounts returned per page
+          schema:
+            type: integer
+            maximum: 30
+          example: 10
+        - name: offset
+          in: query
+          description: When limit is specified, the offset defines the starting page of the user accounts to be returned.
+          schema:
+            type: integer
+            example: 0
+      responses:
+        '200':
+          description: The list of user accounts was retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total_results:
+                    type: integer
+                    example: 20
+        '400':
+          description: The server could not retrieve the list of user accounts due to an issue with the client's request. Check the request body.
+        '401':
+          description: Retrieving a user account list requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the user account list.
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the user account list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /users/{id}:
+    get:
+      summary: Get a user's details.
+      description: Returns the details of a specified user account, such as the username and password.
+      operationId: getUser
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bc9
+          description: The id of the user account provided when it was created.
+        - name: fields
+          in: query
+          description: Specifies which fields to include in the results.
+          schema:
+            type: string
+          example: user_name|role
+      responses:
+        '200':
+          description: The ingredient was retrieved successfully. The results are in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: The server could not retrieve the user account due to an issue with the client's request. Check the request body.
+        '401':
+          description:   Retrieving a user account requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the retrieval of the user account.
+        '404':
+          description: The requested user account could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from retrieving the user account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      summary: Update a user
+      description: An admin can change the details of a user account, such as the user name.
+      operationId: putUser
+      tags:
+        - Users
+      security:
+        - AccessToken: []
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateUserRequest'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bc9
+          description: The unique id of the user account to update.
+      responses:
+        '200':
+          description: The user account was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the admin application user should be redirected after the user account has been updated.
+        '204':
+          description: The user account was updated successfully, and there is no content being returned.
+        '400':
+          description: The server could not update the user account due to an issue with the client's request. Check the request body.
+        '401':
+          description: Updating a user account requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the update of the user account.
+        '404':
+          description: The requested user account could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: The user account could not be updated due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from updating the user account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    delete:
+      summary: Delete a user
+      description: An admin can remove a user account from the KDS.
+      operationId: deleteUser
+      tags:
+        - Users
+      security:
+        - AccessToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 66294b2a4475a41f3e709bca
+          description: The unique id of the user account to be removed.
+      responses:
+        '204':
+          description: The user account was deleted successfully and there is no content being returned.
+        '400':
+          description: The server could not delete the user account due to an issue with the client's request. Check the request body.
+        '401':
+          description: Deleting a user account requires authentication, but the client has not provided valid credentials, or the credentials provided are not accepted.
+        '403':
+          description: The server refused to authorize the deletion of the user account.
+        '404':
+          description: The specified user account could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition that prevented it from deleting the dish.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /auth/token:
+    post:
+      summary: Authenticate the user and obtain an access token
+      description: |
+        This operation exchanges the user's username and password directly for an access token.
+      
+        The client ID and client secret are used for client authentication (basic). Certain endpoints require the access token in the Authorization header to perform admin functions like creating menus.
+
+        If an existing access token is associated with the user, it will be invalidated before a new one is generated.
+      operationId: postAuthLogin
+      tags:
+        - Auth
+      security:
+        - BasicAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CreateTokenRequest'
+      responses:
+        '201':
+          description: Resource created successfully. The response body contains the newly created resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL where the user should be redirected after authentication.
+        '400':
+          description: The server could not authorize the user because of an issue with the client's request. Check the request body.
+        '409':
+          description: The user account could not be authenticated due to a conflict with the current state of the server. It's a client error response, meaning the problem lies with the client's request, but it's a conflict with the server's current state that prevents the request from being fulfilled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The user could not be authenticated due to an unexpected condition at the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /auth/refresh-token:
+    post:
+      summary: Refresh access token
+      description: The authentication access token is converted to a refresh token, which typically lasts longer.
+      operationId: postAuthRefreshToken
+      tags:
+        - Auth
+      requestBody:
+        description: The request fields required to generate a refresh token.
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                refresh_token:
+                  $ref: '#/components/schemas/RefreshToken'
+      responses:
+        '200':
+          description: Access token successfully refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The URL to redirect to after a successful token refresh.
+        '400':
+          description: The server could not refresh the access token due to an issue with the client's request. Check the request body.
+        '401':
+          description: The client did not provide valid credentials for the token refresh.
+        '403':
+          description: The server refused to authorize the refresh of the access token.
+        '404':
+          description: The specified access token could not be found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          description: The server encountered an unexpected condition while trying to convert the access token to a refresh token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  requestBodies:
+    CreateDishRequest:
+      description: A request object describing the data needed for creating a new dish.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Risotto alla Milanese
+                description: The display name of the dish.
+              description:
+                $ref: '#/components/schemas/Description'
+              category:
+                $ref: '#/components/schemas/Category'
+              image_name:
+                $ref: '#/components/schemas/ImageName'
+              ingredients:
+                $ref: '#/components/schemas/Ingredients'
+              preparation_time:
+                $ref: '#/components/schemas/PreparationTime'
+              price:
+                $ref: '#/components/schemas/Price'
+              station:
+                $ref: '#/components/schemas/Station'
+            required:
+              - category
+              - description
+              - image_name
+              - ingredients
+              - preparation_time
+              - name
+              - price
+              - station
+    UpdateDishRequest:
+      description: A request object describing the data needed to update a dish.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Risotto alla Milanese
+                description: The display name of the dish.
+              description:
+                $ref: '#/components/schemas/Description'
+              category:
+                $ref: '#/components/schemas/Category'
+              image_name:
+                $ref: '#/components/schemas/ImageName'
+              ingredients:
+                $ref: '#/components/schemas/Ingredients'
+              preparation_time:
+                $ref: '#/components/schemas/PreparationTime'
+              price:
+                $ref: '#/components/schemas/Price'
+              station:
+                $ref: '#/components/schemas/Station'
+    CreateIngredientRequest:
+      description: The request object schema contains the fields associated with creating a new ingredient.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Carrot
+                description: The name of the ingredient that is displayed to users.
+              in_stock_qty:
+                $ref: '#/components/schemas/InStockQty'
+              price:
+                $ref: '#/components/schemas/Price'
+            required:
+              - name
+              - in_stock_qty
+              - price
+    UpdateIngredientRequest:
+      description: The request object schema contains the fields associated with updating an ingredient.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Carrot
+                description: THe name of the ingredient that is displayed to users.
+              in_stock_qty:
+                $ref: '#/components/schemas/InStockQty'
+              price:
+                $ref: '#/components/schemas/Price'
+    CreateOrderRequest:
+      description: The request object schema contains the fields associated with creating an order.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                pattern: ^[^\s]*$
+                example: John
+                description: The name of the person serving the patron.
+              table_number:
+                $ref: '#/components/schemas/TableNumber'
+              dish_ids:
+                $ref: '#/components/schemas/DishIds'
+              special_requests:
+                $ref: '#/components/schemas/SpecialRequests'
+              scheduled_at:
+                $ref: '#/components/schemas/ScheduledAt'
+            required:
+              - dish_ids
+              - name
+          examples:
+            Order - Unscheduled:
+              value:
+                name: Ben
+                table_number: 18
+                dish_ids:
+                  - 692a4a34a46ecf001f35ac6f
+                  - 6a4a857c022eb7001f9b8972
+                  - 6b7c2441a0db43001f9bf377
+                special_requests: No peanuts.
+                scheduled at: null
+            Order - Scheduled:
+              value:
+                name: Ben
+                table_number: 18
+                dish_ids:
+                  - 692a4a34a46ecf001f35ac6f
+                  - 6a4a857c022eb7001f9b8972
+                  - 6b7c2441a0db43001f9bf377
+                scheduled_at: '2024-08-26T09:03:18.865Z'
+    UpdateOrderRequest:
+      description: The request object schema contains the fields associated with updating an order.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              dish_ids:
+                $ref: '#/components/schemas/DishIds'
+              priority:
+                $ref: '#/components/schemas/Priority'
+              status:
+                $ref: '#/components/schemas/Status'
+    CreateTokenRequest:
+      description: The request object schema contains the fields associated with creating an authentication token.
+      required: true
+      content:
+        application/json:
+          schema:
+            properties:
+              grant_type:
+                type: string
+                description: Tells the login endpoint to perform the resource owner password credential flow.
+                example: password
+              user_name:
+                $ref: '#/components/schemas/UserName'
+              password:
+                $ref: '#/components/schemas/Password'
+            required:
+              - grant_type
+              - user_name
+              - password
+    CreateUserRequest:
+      description: The request object schema contains the fields associated with creating a user account.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                $ref: '#/components/schemas/Email'
+              password:
+                $ref: '#/components/schemas/Password'
+              role:
+                $ref: '#/components/schemas/Role'
+              user_name:
+                $ref: '#/components/schemas/UserName'
+            required:
+              - email
+              - password
+              - role
+              - user_name
+    UpdateUserRequest:
+      description: The request object schema contains the fields associated with updating a user account.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              email:
+                $ref: '#/components/schemas/Email'
+              password:
+                $ref: '#/components/schemas/Password'
+              role:
+                $ref: '#/components/schemas/Role'
+              user_name:
+                $ref: '#/components/schemas/UserName'
+  schemas:
+    AccessToken:
+      type: string
+      description: An authentication token used to access protected endpoints.
+      example: fa0b97b2-445f-41d2-b50f-fb3b014a301e
+    SpecialRequests:
+      type: string
+      nullable: true
+      description: Any special instructions from a patron, typically related to an order.
+    Auth:
+      type: object
+      description: Describes an authentication request or response.
+      properties:
+        auth_id:
+          $ref: '#/components/schemas/Id'
+        created_at:
+          $ref: '#/components/schemas/CreatedAt'
+        updated_at:
+          $ref: '#/components/schemas/UpdatedAt'
+        access_token:
+          $ref: '#/components/schemas/AccessToken'
+        expires_at:
+          $ref: '#/components/schemas/ExpiresAt'
+        refresh_token:
+          $ref: '#/components/schemas/RefreshToken'
+        token_type:
+          $ref: '#/components/schemas/TokenType'
+        user_name:
+          $ref: '#/components/schemas/UserName'
+    Category:
+      type: string
+      enum:
+        - Appetizer
+        - Main Course
+        - Dessert
+        - Drinks
+      example: Main Course
+      description: The category of a dish, such as appetizer, main course, or dessert. Used for grouping dishes for browsing by patrons.
+    CreatedAt:
+      type: string
+      format: date-time
+      example: '2024-04-22T10:00:00Z'
+      readOnly: true
+      description: The timestamp specifying when the resource was created.
+    Description:
+      type: string
+      example: A description of the resource.
+    Dish:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        created_at:
+          $ref: '#/components/schemas/CreatedAt'
+        name:
+          type: string
+          example: Risotto alla Milanese
+          description: The display name of the dish.
+        description:
+          $ref: '#/components/schemas/Description'
+        category:
+          $ref: '#/components/schemas/Category'
+        image_name:
+          $ref: '#/components/schemas/ImageName'
+        ingredients:
+          $ref: '#/components/schemas/Ingredients'
+        preparation_time:
+          $ref: '#/components/schemas/Price'
+        price:
+          $ref: '#/components/schemas/Price'
+        station:
+          $ref: '#/components/schemas/Station'
+    DishIds:
+      type: array
+      items:
+        type: string
+      example:
+        - 692a4a34a46ecf001f35ac6f
+        - 6a4a857c022eb7001f9b8972
+        - 6b7c2441a0db43001f9bf377
+      description: A list of dish identifiers.
+    Email:
+      type: string
+      format: email
+      description: An email address.
+      example: johndoe@gmail.com
+    ExpiresAt:
+      type: string
+      format: date-time
+      example: '2024-04-22T10:00:00Z'
+      readOnly: true
+      description: The timestamp specifying when a resource expires.
+    RefreshToken:
+      type: string
+      description: The refresh token used for authenticating API requests.
+      example: d1a3e281-96b6-4f77-a587-7b6c8c2a96d9
+    Id:
+      type: string
+      example: 674d0bf5c28b69001f8e03a1
+      readOnly: true
+      description: A unique number identifying a specific resource.
+    ImageName:
+      type: string
+      description: The name of an image stored in the KDS.
+      example: burger
+    Ingredients:
+      type: array
+      description: A list of ingredients.
+      items:
+        type: object
+        properties:
+          ingredient_id:
+            type: string
+            example: '66294b2a4475a41f3e709bc5'
+            description: The unique ingredient id.
+          is_essential:
+            type: boolean
+            example: true
+            description: True if the ingredient is required for the dish, False otherwise
+      example:
+        - ingredient_id: '66294b2a4475a41f3e709bc5'
+          is_essential: true
+        - ingredient_id: '66294b2a4475a41f3e709bc6'
+          is_essential: true
+        - ingredient_id: '66294b2a4475a41f3e709bc7'
+          is_essential: false
+    Ingredient:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        created_at:
+          $ref: '#/components/schemas/CreatedAt'
+        updated_at:
+          $ref: '#/components/schemas/UpdatedAt'
+        name:
+          type: string
+          example: Carrot
+          description: The name of the ingredient that is displayed to users.
+        in_stock_qty:
+          $ref: '#/components/schemas/InStockQty'
+        price:
+          $ref: '#/components/schemas/Price'
+    InStockQty:
+      type: integer
+      description: The quantity of an ingredient that is currently in stock and available for use in producing dishes.
+      example: 3
+    Order:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        created_at:
+          $ref: '#/components/schemas/CreatedAt'
+        updated_at:
+          $ref: '#/components/schemas/UpdatedAt'
+        name:
+          type: string
+          pattern: ^[^\s]*$
+          example: John
+          description: The name of the server serving the patron.
+        table_number:
+          $ref: '#/components/schemas/TableNumber'
+        dish_ids:
+          $ref: '#/components/schemas/DishIds'
+        special_requests:
+          $ref: '#/components/schemas/SpecialRequests'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        scheduled_at:
+          $ref: '#/components/schemas/ScheduledAt'
+        status:
+          $ref: '#/components/schemas/Status'
+    Password:
+      type: string
+      description: A password must be at least eight characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character (@, $, !, %, *, ?, &).
+      example: P@ssw0rd!
+    PreparationTime:
+      type: integer
+      description: The time, in minutes, required to prepare a dish.
+      example: 45
+    Price:
+      type: number
+      format: float
+      minimum: 0
+      example: 999
+      description: The price of an item in cents. The price must be greater than zero.
+    Priority:
+      type: integer
+      minimum: 0
+      maximum: 5
+      default: 3
+      description: The priority of a patron's order.
+    Problem:
+      type: object
+      properties:
+        title:
+          type: string
+          description: A problem occurred with a request.
+          example: Human-readable error title.
+        detail:
+          type: string
+          description: The detais of the problem that occurred which may help in resolution of the issue.
+          example: Human-readable error details.
+      required:
+        - title
+        - detail
+    Role:
+      type: string
+      enum:
+        - patron
+        - expeditor
+        - chef
+        - manager
+      example: manager
+      description: The role of an actor in the KDS.
+    ScheduledAt:
+      type: string
+      format: date-time
+      description: The timestamp specifying when an order is scheduled to be produced.
+      nullable: true
+      example: null
+    Station:
+      type: string
+      description: The area in the kitchen where the dishes are to be staged.
+      enum:
+        - cold
+        - hot
+        - beverages
+      example: hot
+    Status:
+      type: string
+      nullable: true
+      enum:
+        - Draft
+        - Received
+        - In Progress
+        - Ready for Assembly
+        - On the Way
+        - Ready for Pickup
+      example: Received
+      description: The status of a patron's order. The status changes are the order progresses through the system.
+    TableNumber:
+      type: integer
+      example: 8
+      nullable: true
+      description: The table number where the patron's order is to be delivered.
+    TokenType:
+      type: string
+      description: The type of authentication token.
+      example: Bearer
+    UpdatedAt:
+      type: string
+      format: date-time
+      example: '2024-04-22T10:00:00Z'
+      readOnly: true
+      description: The timestamp specifying when the resource was updated.
+    User:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        created_at:
+          $ref: '#/components/schemas/CreatedAt'
+        updated_at:
+          $ref: '#/components/schemas/UpdatedAt'
+        user_name:
+          $ref: '#/components/schemas/UserName'
+        email:
+          $ref: '#/components/schemas/Email'
+        password:
+          $ref: '#/components/schemas/Password'
+        role:
+          $ref: '#/components/schemas/Role'
+    UserName:
+      type: string
+      description: The user name of the user for login purposes. It cannot contain spaces.
+      example: john_doe
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: Basic authentication is being used.
